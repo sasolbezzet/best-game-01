@@ -1,61 +1,74 @@
-// Every tuning number and colour in one place. The playfield is a fixed 1280x720 logical area;
-// the renderer scales it to the window, so no rule below depends on the screen size.
+// Solar Flare: Orbital Defense & Extraction Tuning Configuration
+// Fixed 1280x720 logical coordinate field, resolution-independent scaling.
 
-export const FIELD = { width: 1280, height: 720, groundY: 664 };
+export const FIELD = {
+  width: 1280,
+  height: 720,
+  groundY: 660,
+};
 
-/** The simulation's fixed step, in seconds: 60 updates a second whatever the display's rate. */
 export const STEP = 1 / 60;
 
-export const PLAYER = {
-  width: 72,
-  height: 24,
-  speed: 560,
-  invulnerable: 1.5,
+export const SHIP = {
+  width: 68,
+  height: 28,
+  speed: 620,
+  invulnerable: 1.8,
 };
 
-export const LIVES = 3;
+export const SHIELDS = 3;
 
-export const BLOCK = {
-  minWidth: 40,
-  maxWidth: 110,
-  height: 36,
-  speed: 240,
-  speedPerLevel: 30,
-  speedJitter: 90,
-  interval: 0.55,
-  intervalScale: 0.88,
-  minInterval: 0.14,
-  dodgePoints: 1,
+export const SOLAR_FLARE = {
+  minWidth: 42,
+  maxWidth: 114,
+  height: 38,
+  speed: 260,
+  speedPerSector: 32,
+  speedJitter: 95,
+  interval: 0.52,
+  intervalScale: 0.86,
+  minInterval: 0.12,
+  evadePoints: 5,
 };
 
-export const COIN = {
-  size: 24,
-  speed: 190,
-  speedPerLevel: 14,
-  interval: 1.4,
-  intervalJitter: 0.8,
-  points: 10,
+export const PLASMA_CORE = {
+  size: 26,
+  speed: 210,
+  speedPerSector: 16,
+  interval: 1.3,
+  intervalJitter: 0.75,
+  basePoints: 50,
 };
 
-/** Seconds of play per level, and the last level: speeds and spawn rates stop growing there. */
-export const LEVEL = { seconds: 12, max: 12 };
+export const SECTOR = {
+  durationSeconds: 14,
+  maxSector: 10,
+};
 
-/** How many falling things can exist at once; the pool is allocated once, at boot. */
-export const POOL_SIZE = 64;
+export const POOL_CAPACITY = 80;
 
 export const PALETTE = {
-  backdrop: '#11141b',
-  sky: '#1b1f2a',
-  ground: '#2a3040',
-  player: '#4fc3f7',
-  block: '#e5534b',
-  coin: '#f2c94c',
-  panel: '#252b38',
-  text: '#eef1f5',
-  muted: '#8b93a3',
+  space: '#0a0d16',
+  sky: '#0f1424',
+  boundary: '#192238',
+  shipHull: '#00d2ff',
+  shipAccent: '#ffffff',
+  solarFlare: '#ff4400',
+  flareGlow: '#ffaa00',
+  plasmaCore: '#00ffc8',
+  panelBg: '#121829',
+  hudText: '#eef2fb',
+  comboAccent: '#ffd228',
+  subText: '#8fa0c0',
+  danger: '#ff3344',
 };
 
-export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+export const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", sans-serif';
 
-/** Where the best score is kept between visits (this browser only). */
-export const BEST_KEY = 'block-dodger.best';
+export const HIGH_SCORE_KEY = 'solar-flare.high-score';
+
+// Compatibility aliases
+export const PLAYER = SHIP;
+export const BLOCK = SOLAR_FLARE;
+export const COIN = PLASMA_CORE;
+export const LIVES = SHIELDS;

@@ -1,134 +1,133 @@
-// Boot and the one loop: input is read every frame, the world advances in fixed 1/60 s steps
-// (several in a slow frame, none in a fast one), and the renderer paints what is there. The game
-// moves between four screens: title, play, paused and game over.
-//
-// ?seed=N fixes the falling pattern. ?shot=start|play|end (with &seed=N) stages that scene
-// instead of running the loop, paints it twice and sets window.__shotReady for a screenshot.
-import { BEST_KEY, LIVES, STEP } from './config.js';
+// Solar Flare Main Loop: Input Handling, State Updates, and Lifecycle
+import { HIGH_SCORE_KEY, SHIELDS, STEP } from './config.js';
+import { createInput } from './input.js';
 import { createRandom } from './random.js';
-import { createWorld, EVENT_HIT, EVENT_OVER } from './world.js';
-import { ACTION_CONFIRM, ACTION_PAUSE, createInput } from './input.js';
 import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
 import { stageShot } from './shots.js';
+import { createWorld, EVENT_MISSION_OVER, EVENT_SHIELD_DAMAGE } from './world.js';
 
-/** The longest frame the loop catches up on; a longer stall (a hidden tab) is dropped, not replayed. */
-const MAX_FRAME = 0.25;
+const MAX_FRAME_DELTA = 0.25;
 
 const params = new URLSearchParams(window.location.search);
-const shot = params.get('shot');
-const seedParam = Number.parseInt(params.get('seed') ?? '', 10);
-const seed = Number.isInteger(seedParam) ? seedParam : Math.floor(Math.random() * 4294967296);
+const shotName = params.get('shot');
+const seedArg = Number.parseInt(params.get('seed') ?? '', 10);
+const seed = Number.isInteger(seedArg) ? seedArg : Math.floor(Math.random() * 4294967296);
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('status');
 const world = createWorld(createRandom(seed));
 const renderer = createRenderer(canvas);
 
-function readBest() {
+function getSavedHighScore() {
   try {
-    return Number.parseInt(window.localStorage.getItem(BEST_KEY) ?? '0', 10) || 0;
+    return Number.parseInt(window.localStorage.getItem(HIGH_SCORE_KEY) ?? '0', 10) || 0;
   } catch {
     return 0;
   }
 }
 
-function saveBest(value) {
+function updateSavedHighScore(score) {
   try {
-    window.localStorage.setItem(BEST_KEY, String(value));
+    window.localStorage.setItem(HIGH_SCORE_KEY, String(score));
   } catch {
-    // Storage can be off (private windows): the best score then lasts this visit only.
+    // LocalStorage fallback
   }
 }
 
-function runShot(name) {
+function executeShot(name) {
   const scene = stageShot(name, world);
-  let painted = 0;
-  function paint() {
+  let frames = 0;
+  function renderFrame() {
     renderer.draw(world.state, scene.screen, scene.best);
-    painted += 1;
-    if (painted < 2) requestAnimationFrame(paint);
+    frames += 1;
+    if (frames < 2) requestAnimationFrame(renderFrame);
     else window.__shotReady = true;
   }
-  requestAnimationFrame(paint);
+  requestAnimationFrame(renderFrame);
 }
 
-function runGame() {
+function runSolarFlare() {
   const input = createInput(canvas);
   let screen = SCREEN_TITLE;
-  let best = readBest();
+  let highScore = getSavedHighScore();
   let accumulator = 0;
-  let last = performance.now();
+  let lastTime = performance.now();
 
-  // Screen readers (and anyone watching the page's text) hear the screen changes and each hit.
-  function announce(message) {
-    status.textContent = message;
+  function announce(msg) {
+    if (status) status.textContent = msg;
   }
 
-  function startGame() {
+  function launchMission() {
     world.reset();
     accumulator = 0;
     screen = SCREEN_PLAY;
-    announce(`Playing. ${LIVES} lives.`);
+    announce(`Mission launched. ${SHIELDS} shield cells active.`);
   }
 
-  function endGame() {
+  function endMission() {
     screen = SCREEN_OVER;
-    if (world.state.score > best) {
-      best = world.state.score;
-      saveBest(best);
+    if (world.state.score > highScore) {
+      highScore = world.state.score;
+      updateSavedHighScore(highScore);
     }
-    announce(`Game over. Score ${world.state.score}. Best ${best}.`);
+    announce(`Mission terminated. Score: ${world.state.score}. High score: ${highScore}.`);
   }
 
-  function handleActions() {
+  function processInputActions() {
     const actions = input.takeActions();
-    if (actions & ACTION_CONFIRM && (screen === SCREEN_TITLE || screen === SCREEN_OVER)) startGame();
-    else if (actions & ACTION_PAUSE && screen === SCREEN_PLAY) {
+    if (actions & 1 && (screen === SCREEN_TITLE || screen === SCREEN_OVER)) {
+      launchMission();
+    } else if (actions & 2 && screen === SCREEN_PLAY) {
       screen = SCREEN_PAUSED;
-      announce('Paused.');
-    } else if (actions & (ACTION_PAUSE | ACTION_CONFIRM) && screen === SCREEN_PAUSED) {
+      announce('Mission paused.');
+    } else if (actions & (1 | 2) && screen === SCREEN_PAUSED) {
       screen = SCREEN_PLAY;
-      announce('Playing.');
+      announce('Mission resumed.');
     }
   }
 
-  function step() {
+  function updateSimulation() {
     if (screen === SCREEN_TITLE) {
       world.step(STEP, 0, true);
       return;
     }
     const events = world.step(STEP, input.direction(), false);
-    if (events & EVENT_OVER) endGame();
-    else if (events & EVENT_HIT) announce(world.state.lives === 1 ? 'Hit. 1 life left.' : `Hit. ${world.state.lives} lives left.`);
+    if (events & EVENT_MISSION_OVER) {
+      endMission();
+    } else if (events & EVENT_SHIELD_DAMAGE) {
+      announce(`Shield alert: ${world.state.shields} cells remaining.`);
+    }
   }
 
-  function frame(now) {
-    requestAnimationFrame(frame);
-    accumulator += Math.min((now - last) / 1000, MAX_FRAME);
-    last = now;
-    handleActions();
+  function tick(now) {
+    requestAnimationFrame(tick);
+    accumulator += Math.min((now - lastTime) / 1000, MAX_FRAME_DELTA);
+    lastTime = now;
+
+    processInputActions();
+
     if (screen === SCREEN_TITLE || screen === SCREEN_PLAY) {
       while (accumulator >= STEP && (screen === SCREEN_TITLE || screen === SCREEN_PLAY)) {
-        step();
+        updateSimulation();
         accumulator -= STEP;
       }
     } else {
       accumulator = 0;
     }
-    renderer.draw(world.state, screen, best);
+
+    renderer.draw(world.state, screen, highScore);
   }
 
-  // Leaving the tab pauses a running game rather than letting blocks fall unseen.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === SCREEN_PLAY) {
       screen = SCREEN_PAUSED;
-      announce('Paused.');
+      announce('Mission paused.');
     }
   });
 
-  announce('Block Dodger. Press Space or click to start.');
-  requestAnimationFrame(frame);
+  announce('Solar Flare: Orbital Defense. Press Space or Click to Launch.');
+  requestAnimationFrame(tick);
 }
 
-if (shot) runShot(shot);
-else runGame();
+if (shotName) executeShot(shotName);
+else runSolarFlare();
