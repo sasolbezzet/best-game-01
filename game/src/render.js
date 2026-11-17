@@ -6,6 +6,7 @@ export const SCREEN_TITLE = 'title';
 export const SCREEN_PLAY = 'play';
 export const SCREEN_PAUSED = 'paused';
 export const SCREEN_OVER = 'over';
+export const SCREEN_VICTORY = 'victory';
 
 const PANEL_WIDTH = 620;
 
@@ -183,6 +184,14 @@ export function createRenderer(canvas) {
 
     if (screen === SCREEN_PAUSED) {
       drawPanel('PAUSED', ['Orbital telemetry standing by.'], PALETTE.hudText, 'Press P to Resume');
+    } else if (screen === SCREEN_VICTORY) {
+      const victoryLines = [
+        'ALL 10 ORBITAL SECTORS CLEARED — S-CLASS ACE RATING',
+        `Final Victory Score: ${state.score.toLocaleString()} PTS`,
+        `Plasma Cores Harvested: 142 · Multiplier: x${state.multiplier}`,
+        `All-Time Best: ${Math.max(highScore, state.score).toLocaleString()}`,
+      ];
+      drawPanel('MISSION ACCOMPLISHED', victoryLines, PALETTE.plasmaCore, 'Press Space or Click to Re-Deploy');
     } else if (screen === SCREEN_OVER) {
       const overLines = [
         `Mission Score: ${state.score.toLocaleString()}`,

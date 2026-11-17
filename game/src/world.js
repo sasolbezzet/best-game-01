@@ -7,6 +7,7 @@ export const ENTITY_CORE = 1;
 export const EVENT_SHIELD_DAMAGE = 1;
 export const EVENT_CORE_COLLECTED = 2;
 export const EVENT_MISSION_OVER = 4;
+export const EVENT_MISSION_VICTORY = 8;
 
 function checkAABB(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
@@ -103,6 +104,9 @@ export function createWorld(random) {
 
     state.elapsed += delta;
     state.sector = Math.min(SECTOR.maxSector, Math.floor(state.elapsed / SECTOR.durationSeconds) + 1);
+    if (!demo && state.elapsed >= SECTOR.durationSeconds * SECTOR.maxSector) {
+      events |= EVENT_MISSION_VICTORY;
+    }
 
     // Spawning timers
     state.flareTimer -= delta;

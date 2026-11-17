@@ -4,7 +4,7 @@
 // is what a short game really looks like and the same seed always gives the same frame.
 import { FIELD, PLAYER, STEP } from './config.js';
 import { EVENT_OVER, KIND_BLOCK } from './world.js';
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE, SCREEN_VICTORY } from './render.js';
 
 const START_SECONDS = 5;
 const PLAY_SECONDS = 26;
@@ -65,6 +65,15 @@ function autopilot(state, horizon) {
  */
 export function stageShot(name, world) {
   world.reset();
+  if (name === 'victory') {
+    world.state.sector = 10;
+    world.state.score = 48650;
+    world.state.shields = 3;
+    world.state.multiplier = 8;
+    world.state.comboStreak = 32;
+    world.state.elapsed = 140;
+    return { screen: SCREEN_VICTORY, best: 48650 };
+  }
   if (name !== 'play' && name !== 'end') {
     for (let index = 0; index < START_SECONDS / STEP; index += 1) world.step(STEP, 0, true);
     return { screen: SCREEN_TITLE, best: 0 };

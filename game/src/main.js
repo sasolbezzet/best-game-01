@@ -2,9 +2,9 @@
 import { HIGH_SCORE_KEY, SHIELDS, STEP } from './config.js';
 import { createInput } from './input.js';
 import { createRandom } from './random.js';
-import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE, SCREEN_VICTORY } from './render.js';
 import { stageShot } from './shots.js';
-import { createWorld, EVENT_MISSION_OVER, EVENT_SHIELD_DAMAGE } from './world.js';
+import { createWorld, EVENT_MISSION_OVER, EVENT_MISSION_VICTORY, EVENT_SHIELD_DAMAGE } from './world.js';
 
 const MAX_FRAME_DELTA = 0.25;
 
@@ -73,9 +73,18 @@ function runSolarFlare() {
     announce(`Mission terminated. Score: ${world.state.score}. High score: ${highScore}.`);
   }
 
+  function completeMission() {
+    screen = SCREEN_VICTORY;
+    if (world.state.score > highScore) {
+      highScore = world.state.score;
+      updateSavedHighScore(highScore);
+    }
+    announce(`Mission accomplished! Sector 10 cleared with score ${world.state.score}. High score: ${highScore}.`);
+  }
+
   function processInputActions() {
     const actions = input.takeActions();
-    if (actions & 1 && (screen === SCREEN_TITLE || screen === SCREEN_OVER)) {
+    if (actions & 1 && (screen === SCREEN_TITLE || screen === SCREEN_OVER || screen === SCREEN_VICTORY)) {
       launchMission();
     } else if (actions & 2 && screen === SCREEN_PLAY) {
       screen = SCREEN_PAUSED;
@@ -93,6 +102,10 @@ function runSolarFlare() {
     }
     const events = world.step(STEP, input.direction(), false);
     if (events & EVENT_MISSION_OVER) {
+      endMission();
+    } else if (events & EVENT_MISSION_VICTORY) {
+      completeMission();
+    } else if (events & EVENT_SHIELD_DAMAGE) {
       endMission();
     } else if (events & EVENT_SHIELD_DAMAGE) {
       announce(`Shield alert: ${world.state.shields} cells remaining.`);
